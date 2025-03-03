@@ -1,0 +1,5 @@
+config MY_EXAMPLE
+	tristate "Example driver in Linux tree"
+    depends on USB_SERIAL
+	help
+	  Long description about live and why this module exist
