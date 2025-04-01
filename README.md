@@ -114,13 +114,16 @@ qemu-system-x86_64 -smp cpus=4 -m 256m -cpu host -nographic -kernel /wspc/linux-
 5. Run `gdb vmlinux` and `target remote :1234` to connect to the vm
 6. Run the `lx-symbols <module_path>` command in gdb to load symbols from the kernel module
 
-Dor more inforamtion check [kernel documentation](https://www.kernel.org/doc/html/v6.14-rc3/process/debugging/gdb-kernel-debugging.html) about debugging with `gdb`
+Dor more inforamtion check
+[kernel documentation](https://www.kernel.org/doc/html/v6.14-rc3/process/debugging/gdb-kernel-debugging.html)
+about debugging with `gdb`. See [`config.gdb` config](./config.gdb)
 
 ### Tracepoints
 
 1. [Ftrace](https://www.kernel.org/doc/html/latest/trace/ftrace.html)
-    1. Enable tracing (function or function_graph)
-    2. Trace some kernel events (e.g. `ksys_read,write`)
+    1. Compile the kernel with ftrace support, see [`config.ftrace` config](./config.ftrace)
+    2. Enable tracing (function or function_graph)
+    3. Trace some kernel events (e.g. `ksys_read,write`)
 2. Make your own tracepoints with trace_printk
 3. Define a trace point with `TRACE_EVENT` macro (see [details](https://lwn.net/Articles/379903/))
     1. Be careful, it is required separate header file!
@@ -131,7 +134,8 @@ Dor more inforamtion check [kernel documentation](https://www.kernel.org/doc/htm
 
 * [Module dir](./ex3-pid-info/)
 * To use [dynamic debug](https://www.kernel.org/doc/html/latest/admin-guide/dynamic-debug-howto.html):
-    * Enable dynamic debug (`CONFIG_DYNAMIC_DEBUG` option) in the kernel config
+    * Enable dynamic debug (`CONFIG_DYNAMIC_DEBUG` option) in the kernel config.
+      See [`config.ddebug` config](./config.ddebug)
     * Recompile the kernel
     * Activate debug messages in the module via `/proc/dynamic_debug/contol`
 * GDB: [see section with gdb](#how-to-use-gdb-with-qemu)
@@ -139,7 +143,7 @@ Dor more inforamtion check [kernel documentation](https://www.kernel.org/doc/htm
 
 ### Fourth module: sanitizers
 
-* [Module dir](./ex4-sanitizers/)
+* [Module dir](./ex4-sanitizers/), [`config.san` config](./config.san)
 * [KASAN](https://www.kernel.org/doc/html/latest/dev-tools/kasan.html)
     * Detects memory access bugs: use-after-free, double free, out of bounds access, ...
     * Enable `CONFIG_KASAN` option in the kernel config
