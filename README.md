@@ -101,17 +101,114 @@ qemu-system-x86_64 -smp cpus=4 -m 256m -cpu host -nographic -kernel /wspc/linux-
 3. Add `obj-$(CONFIG_MY_EXAMPLE) += ex2/` to the `Makefile`
 4. Use `make modules_install` to install compiled modules
 
-### Third module
+# Practice 2
 
-* To use dynamic debug:
-    * Enable it in the config
+## Useful knowledge
+
+### How to use gdb with qemu
+
+1. Add the `-s` option to the `qemu` command to start gdb server on port 1234
+2. Enable the `DEBUG_SYMBOLS` option in the kernel config
+3. Add the `CFLAGS_MODULE='-g'` flag to the `Makefile` of the kernel module
+4. Make `make scripts_gdb` to generate gdb support commands
+5. Run `gdb vmlinux` and `target remote :1234` to connect to the vm
+6. Run the `lx-symbols <module_path>` command in gdb to load symbols from the kernel module
+
+Dor more inforamtion check [kernel documentation](https://www.kernel.org/doc/html/v6.14-rc3/process/debugging/gdb-kernel-debugging.html) about debugging with `gdb`
+
+### Tracepoints
+
+1. [Ftrace](https://www.kernel.org/doc/html/latest/trace/ftrace.html)
+    1. Enable tracing (function or function_graph)
+    2. Trace some kernel events (e.g. `ksys_read,write`)
+2. Make your own tracepoints with trace_printk
+3. Define a trace point with `TRACE_EVENT` macro (see [details](https://lwn.net/Articles/379903/))
+    1. Be careful, it is required separate header file!
+
+## Modules
+
+### Third module: complex exmaple with dynamic debug & tracepoints
+
+* [Module dir](./ex3-pid-info/)
+* To use [dynamic debug](https://www.kernel.org/doc/html/latest/admin-guide/dynamic-debug-howto.html):
+    * Enable dynamic debug (`CONFIG_DYNAMIC_DEBUG` option) in the kernel config
     * Recompile the kernel
     * Activate debug messages in the module via `/proc/dynamic_debug/contol`
-* GDB: TBD
-* Tracepoints: TBD
+* GDB: [see section with gdb](#how-to-use-gdb-with-qemu)
+* Tracepoints: [see section with tracepoints](#tracepoints)
+
+### Fourth module: sanitizers
+
+* [Module dir](./ex4-sanitizers/)
+* [KASAN](https://www.kernel.org/doc/html/latest/dev-tools/kasan.html)
+    * Detects memory access bugs: use-after-free, double free, out of bounds access, ...
+    * Enable `CONFIG_KASAN` option in the kernel config
+    * Add the `kasan_multi_shot=Y` argument to the kernel load
+      so that it does not go silent after the first error
+    * Very strong impact on system performance
+* [KMEMLEAK](https://www.kernel.org/doc/html/latest/dev-tools/kmemleak.html)
+    * Detects memory leaks
+    * Enable `CONFIG_DEBUG_KMEMLEAK` option in the kernel config
+    * Run `echo scan > /sys/kernel/debug/kmemleak` to trigger a memory leak search
+    * Run `cat /sys/kernel/debug/kmemleak` to get information about memory leaks found
+* [LOCKDEP](https://www.kernel.org/doc/html/latest/locking/lockdep-design.html)
+    * Detects bugs in locking: deadlocks, missing lock, lock correctness, ...
+    * Enable `CONFIG_LOCKDEP` option in the kernel config
+    * Use the `lockdep_assert_held*` family of macro to increase lockdep strength
+
+Check out [syzkaller](https://github.com/google/syzkaller) about kernel fuzzing.
+It is very exciting
+
+# Practice 3
+
+### Fifth module: Basic structures and API
+
+* [Module dir](./ex5-queue/)
+* [Memory allocation](https://www.kernel.org/doc/html/latest/core-api/memory-allocation.html):
+    * For most cases: `kmalloc`/`kzalloc`/`kcalloc`
+    * For some cases: `vmalloc`
+    * To allocate many identical objects: [kmemcache](https://www.kernel.org/doc/html/latest/core-api/mm-api.html#c.kmem_cache_create)
+* [Strings](https://www.kernel.org/doc/html/latest/core-api/kernel-api.html#string-conversions):
+    * `sscanf`
+    * `strto*` family of functions
+* [List](https://www.kernel.org/doc/html/latest/core-api/kernel-api.html#list-management-functions)
+    * The basic structure that links the entities together
+    * Use `list_for_each` family of macro to iterate over list
+* [Workqueue](https://www.kernel.org/doc/html/latest/core-api/workqueue.html)
+    * Defer work to another context
+    * Module workqueues and system workqueues
+    * Normal `work_struct` to defer work to another context
+    * Delayed `delayed_work` to defer work for a while
+* [Kthread](https://www.kernel.org/doc/html/latest/driver-api/basics.html#c.kthread_create)
+    * New schedulable entity
+    * Use `kthread_create` or `kthread_run` to create a new kthread
+    * Use `kthread_should_stop` to check if a thread should be stopped
+* [Sleep](https://www.kernel.org/doc/html/latest/timers/delay_sleep_functions.html):
+    * Wait a certain amount of time
+    * For most cases: `delay`/`msleep`
+    * Timers with callback
+* [Completion](https://www.kernel.org/doc/html/latest/scheduler/completion.html)
+    * Wait for some event
+    * A `wait_for_completion*` family of functions for a variety of situations
+    * Use `complete` to wake up only one waiter and `complete_all` to wake up all waiters
+* [Refcnt](https://www.kernel.org/doc/html/latest/core-api/kref.html)
+    * Control the lifetime of the object
+    * Basic `+1` in constructor and `-1` in destructor
+    * Pin an object (_may be under lock_) before use
+* [Atomic operations](https://www.kernel.org/doc/html/latest/core-api/wrappers/atomic_t.html)
+    * `atomic_t`
+    * Basic operations: `atomic_set`, `atomic_read`, `atomic_inc`, ...
+    * Advanced operations: `atomic_cmpxchg`, `atomic_fetch_add`, `atomic_inc_not_zero`, ...
+    * Bit operations: `set_bit`, `test_bit`, `clean_bit`
+* [Memory barriers](https://www.kernel.org/doc/html/latest/core-api/wrappers/memory-barriers.html)
+* [Locking](https://www.kernel.org/doc/html/latest/kernel-hacking/locking.html) ([link2](https://www.kernel.org/doc/html/latest/locking/locktypes.html))
+    * Protect a critical section from concurrent access/modification
+    * spinlock, mutex, semaphor, rwlock
+    * [Read-Copy-Update](https://www.kernel.org/doc/html/latest/RCU/whatisRCU.html)
 
 # Usefull links
 
 * [Labs on linux](https://linux-kernel-labs.github.io/refs/heads/master/labs/kernel_modules.html)
 * [Notes for debug](https://cs4118.github.io/dev-guides/kernel-debugging.html)
+* [How to defer work in the kernel](https://linux-kernel-labs.github.io/refs/heads/master/labs/deferred_work.html)
 
