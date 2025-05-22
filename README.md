@@ -216,7 +216,7 @@ It is very exciting
 * [Module dir](./ex6-netfilter/)
 * [Char devices](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html)
 * [Netfilter](https://linux-kernel-labs.github.io/refs/heads/master/labs/networking.html#netfilter-1)
-*
+
 # Practice 5
 
 ### Seventh module: Custom QEMU device and PCI driver implementation for it
