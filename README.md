@@ -210,6 +210,19 @@ It is very exciting
     * spinlock, mutex, semaphor, rwlock
     * [Read-Copy-Update](https://www.kernel.org/doc/html/latest/RCU/whatisRCU.html)
 
+# Practice 4
+
+### Sixth module: Custom char device for network filtering
+* [Module dir](./ex6-netfilter/)
+* [Char devices](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html)
+* [Netfilter](https://linux-kernel-labs.github.io/refs/heads/master/labs/networking.html#netfilter-1)
+*
+# Practice 5
+
+### Seventh module: Custom QEMU device and PCI driver implementation for it
+* [Module dir](./ex7-msi-irq)
+* [PCI drivers](https://docs.kernel.org/PCI/pci.html)
+
 # Usefull links
 
 * [Labs on linux](https://linux-kernel-labs.github.io/refs/heads/master/labs/kernel_modules.html)
