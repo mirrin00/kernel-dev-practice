@@ -1,0 +1,4 @@
+devtmpfs /dev devtmpfs mode=0755,nosuid 0 0
+tmpfs /tmp tmpfs rw,nosuid 0 0
+proc /proc proc rw,nosuid 0 0
+sysfs /sys sysfs rw,nosuid 0 0

@@ -9,7 +9,6 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/string.h>
-#include <stdio.h>
 
 // Macros for logging
 #define EX3_PRFX "example3: "

@@ -1,0 +1,12 @@
+::askfirst:-/bin/sh
+tty2::askfirst:-/bin/sh
+tty3::askfirst:-/bin/sh
+tty4::askfirst:-/bin/sh
+::restart:/sbin/init
+::sysinit:/bin/hostname -F /etc/hostname
+::sysinit:/mount.sh
+::sysinit:/setup_net.sh
+::respawn:dropbear -BRP /tmp/dropbear.pid
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r
+::shutdown:/sbin/swapoff -a
