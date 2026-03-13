@@ -32,6 +32,9 @@ DROPBEAR_PATH := $(BUILD_DIR)/dropbear-$(DROPBEAR_DIRNAME)
 SKELETON_BB_PATH := $(WORK_DIR)/rootfs-files/busybox
 RAMFS_BB_DIR := $(BUILD_DIR)/ramfs-busybox
 RAMFS_BB_IMAGE := $(BUILD_DIR)/ramfs-busybox.img
+FISH_VER := 4.5.0
+FISH_TAR := fish-$(FISH_VER)-linux-$(ARCH).tar.xz
+FISH_BIN := $(BUILD_DIR)/fish
 
 # === alpine rootfs ===
 ROOTFS_ALPINE_IMG_PATH := $(BUILD_DIR)/rootfs-alpine.img
@@ -44,13 +47,26 @@ ROOTFS_ALPINE_PACKAGES := "openrc-init alpine-base fish python3 openssh-server v
 
 # === qemu/ssh options ===
 QEMU_SSH_PORT ?= 2222
-QEMU_MEMORY ?= 256m
+QEMU_MEMORY ?= 512m
 QEMU_IMG_OPTS := -initrd $(RAMFS_BB_IMAGE)
 SSH_OPTS := -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
 SSH_USER := root@127.0.0.1
 SSH := ssh $(SSH_OPTS) -p $(QEMU_SSH_PORT) $(SSH_USER)
 SCP := scp -O $(SSH_OPTS) -P $(QEMU_SSH_PORT)
 SSH_CMD ?=
+TMP_HOME := /tmp/bb_home.img
+TMP_HOME_DIR := $(WORK_DIR)/rootfs-files/home-root
+TMP_HOME_SIZE := 20M
+# -hda $(TMP_HOME) -- shorcut for scsi device (ide-hd)
+# -blockdev driver=qcow2,file.driver=file,node-name=home,file.filename=$(TMP_HOME) -device virtio-blk,drive=home
+# ^^^ blockdev for qcow2
+# -blockdev file,filename=$(TMP_HOME),node-name=home -device virtio-blk,drive=home -- blockdev for raw
+# VVV simple usage
+QEMU_DRIVES := -drive file=$(TMP_HOME),if=none,id=home -device virtio-blk,drive=home
+QEMU_EXT_DRIVE_PATH ?= /tmp/disk.data
+QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device virtio-blk,drive=extd
+# See https://qemu-project.gitlab.io/qemu/system/devices/nvme.html
+# QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device nvme,id=nvme-ctrl-0,serial=deadbeef -device nvme-ns,drive=extd,logical_block_size=4096,physical_block_size=4096,ms=8,pi=1
 
 # === Modules options ===
 MODULE_NAME ?=
@@ -127,24 +143,37 @@ $(DROPBEAR_PATH)/_install: $(DROPBEAR_PATH)
 	cd $(DROPBEAR_PATH) && ./configure --disable-zlib --enable-static
 	make -C $(DROPBEAR_PATH) -j$(NPROC) PROGRAMS="dropbear dbclient scp" DESTDIR=$(DROPBEAR_PATH)/_install install
 
-$(RAMFS_BB_IMAGE): $(BUSYBOX_PATH)/_install $(SKELETON_BB_PATH)
+$(FISH_TAR):
+	wget https://github.com/fish-shell/fish-shell/releases/download/$(FISH_VER)/$@
+
+$(FISH_BIN): $(FISH_TAR)
+	tar -xf $(FISH_TAR) -C $(BUILD_DIR)
+
+$(RAMFS_BB_IMAGE): $(BUSYBOX_PATH)/_install $(SKELETON_BB_PATH) $(FISH_BIN)
 	mkdir -p $(RAMFS_BB_DIR)
 	cd $(RAMFS_BB_DIR) && mkdir -p bin etc/dropbear dev root proc sys tmp
 	$(RSYNC) $(BUSYBOX_PATH)/_install/* $(RAMFS_BB_DIR)
 	$(RSYNC) $(DROPBEAR_PATH)/_install/usr/local/* $(RAMFS_BB_DIR)
+	$(RSYNC) $(FISH_BIN) $(RAMFS_BB_DIR)/sbin
 ifneq ($(strip $(INSTALL_MODULES)),)
 	make -C $(KERNEL_PATH) INSTALL_MOD_PATH=$(RAMFS_BB_DIR) modules_install
 endif
 	$(RSYNC) rootfs-files/busybox/ $(RAMFS_BB_DIR)
 	cd $(RAMFS_BB_DIR) && find . | cpio --quiet -H newc -o | gzip -9 -n > $(RAMFS_BB_IMAGE)
 
+$(TMP_HOME):
+	virt-make-fs -F qcow2 -s +$(TMP_HOME_SIZE) -t ext4 --blocksize=512 $(TMP_HOME_DIR) $(TMP_HOME)
+# 	qemu-img create -f raw $(TMP_HOME) $(TMP_HOME_SIZE)
+# 	mkfs.ext4 $(TMP_HOME)
+
+create-tmp-home: $(TMP_HOME)
 busybox: $(BUSYBOX_PATH)/_install
 dropbear: $(DROPBEAR_PATH)/_install
 ramfs-busybox: $(RAMFS_BB_IMAGE)
 remove-ramfs-busybox:
 	rm -f $(RAMFS_BB_IMAGE)
 
-.PHONY: busybox ramfs-busybox dropbear
+.PHONY: busybox ramfs-busybox dropbear remove-ramfs-busybox create-tmp-root
 
 # === Make rootfs with alpine ===
 
@@ -194,14 +223,19 @@ module-reload:
 # === QEMU commands ===
 
 # To change init process set rdinit=/path/to/init in kernel args
+QEMU_KPARMS := console=ttyS0 root=/dev/sda rw netconsole=+@10.0.2.15/,4444@192.168.0.109/
+
 qemu-run:
 	qemu-system-x86_64 --enable-kvm -smp cpus=4 -m $(QEMU_MEMORY) -cpu host -nographic \
-	-append "console=ttyS0 root=/dev/sda rw" \
+	-append "$(QEMU_KPARMS)" \
 	-nic user,hostfwd=tcp:127.0.0.1:$(QEMU_SSH_PORT)-:22 \
-	-kernel $(BZIMAGE) $(QEMU_IMG_OPTS)
+	-kernel $(BZIMAGE) $(QEMU_IMG_OPTS) $(QEMU_DRIVES)
 
 qemu-kill:
 	kill $(shell pgrep -f qemu-system-x86_64)
 
 qemu-ssh:
 	TERM="xterm-256color" $(SSH) $(SSH_CMD)
+
+qemu-socat:
+	socat udp-recv:4444 - | python3 $(WORK_DIR)/netconsole_pretty.py

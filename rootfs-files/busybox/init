@@ -7,8 +7,12 @@ mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t tracefs none /sys/kernel/tracing
 mount -t tmpfs tmpfs /tmp
-if [ -b /dev/sda ]; then
-    mount /dev/sda /root
+if [ -b /dev/vda ]; then
+    mount /dev/vda /root
+else
+    if [ -b /dev/sda ]; then
+        mount /dev/sda /root
+    fi
 fi
 hostname -F /etc/hostname
 

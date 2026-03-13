@@ -70,6 +70,9 @@ qemu-run rootfs_type="busybox":
 qemu-kill:
 	{{ docker-make }} qemu-kill
 
+qemu-socat:
+	{{ docker-make }} qemu-socat
+
 ssh *CMD:
 	{{ docker-make }} SSH_CMD="{{ CMD }}" qemu-ssh
 
