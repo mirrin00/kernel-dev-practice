@@ -21,8 +21,6 @@
 #include "linux/array_size.h"
 #include "linux/kobject.h"
 #include "linux/printk.h"
-
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/sysfs.h>
@@ -62,8 +60,8 @@ static int do_lock(char *args);
 
 typedef int (*cmd_func_t)(char *args);
 
-#define __STR_TO_command(name, op, f) { name, sizeof(name) - 1, op, f}
-#define STR_TO_command(name, op, f) __STR_TO_command(name": ", op, f)
+#define __STR_TO_command(name, op, f) { name, sizeof(name) - 1, op, f }
+#define STR_TO_command(name, op, f) __STR_TO_command(name ": ", op, f)
 
 static struct {
     const char *name;
@@ -105,7 +103,8 @@ static LIST_HEAD(main);
 static atomic_t atom = ATOMIC_INIT(10);
 static volatile ulong flags;
 
-static int do_print(char *args) {
+static int do_print(char *args)
+{
     pr_info("print command");
     pr_info("arguments are %s", args);
     if (mem) {
@@ -203,7 +202,7 @@ static int do_atom(char *args)
     // } else {
     //     pr_warn("Flag %llx is disabled", x);
     // }
-    
+
     if (!test_and_set_bit(x, &flags)) {
         pr_info("Flag %llx is enabled", x);
     } else {
@@ -222,7 +221,6 @@ static int do_del_list(char *args)
     }
     return 0;
 }
-
 
 /*
  * =====================================
@@ -244,7 +242,8 @@ static int kthread_example(void *data)
     struct thread_data *d = data;
     // BP2: should_stop
     while (!kthread_should_stop()) {
-        pr_info("Kthread on cpu %d (desired %d), magic %lx", current->on_cpu, d->cpu, d->magic);
+        pr_info("Kthread on cpu %d (desired %d), magic %lx", current->on_cpu,
+                d->cpu, d->magic);
         if (d->should_delay) {
             mdelay(d->time_ms);
             // BP3: Try to remove cond_resched :)
@@ -277,13 +276,14 @@ static int do_kthread(char *args)
     }
 
     d = kmalloc(sizeof(*d), GFP_KERNEL);
-    *d = (struct thread_data) {
+    *d = (struct thread_data){
         .cpu = x,
         .magic = magic,
         .time_ms = time_ms,
         .should_delay = !!is_delay,
     };
-    th_struct = kthread_create_on_cpu(kthread_example, (void*)d, x, "lv-exam-kt:%u");
+    th_struct = kthread_create_on_cpu(kthread_example, (void *)d, x,
+                                      "lv-exam-kt:%u");
     // BP4: ptr-err conversion
     if (IS_ERR(th_struct)) {
         err = PTR_ERR(th_struct);
@@ -301,7 +301,8 @@ exit:
     return err;
 }
 
-static int do_kthread_stop(char *args) {
+static int do_kthread_stop(char *args)
+{
     if (!th_struct) {
         pr_err("Thread is not running");
         return -EPERM;
@@ -312,13 +313,11 @@ static int do_kthread_stop(char *args) {
     return 0;
 }
 
-
 /*
  * ================================
  * ==== 2. Workqueue + delayed ====
  * ================================
  */
-
 
 struct work_data {
     int cpu;
@@ -333,7 +332,8 @@ static void __process_work(struct work_data *d)
 {
     int cpu = current->on_cpu;
     ulong m = d->magic;
-    pr_info("Work is processed: cpu=%d magic=%lx comm=%16s", cpu, m, current->comm);
+    pr_info("Work is processed: cpu=%d magic=%lx comm=%16s", cpu, m,
+            current->comm);
     kfree(d);
 }
 
@@ -375,7 +375,7 @@ static int do_workq(char *args)
     }
 
     d = kmalloc(sizeof(*d), GFP_KERNEL);
-    *d = (struct work_data) {
+    *d = (struct work_data){
         .cpu = x,
         .magic = magic,
     };
@@ -434,7 +434,7 @@ static int do_timer(char *args)
     }
 
     d = kmalloc(sizeof(*d), GFP_KERNEL);
-    *d = (struct timer_data) {
+    *d = (struct timer_data){
         .magic = magic,
     };
     timer_setup(&d->timer, __timer_cb, 0);
@@ -559,7 +559,6 @@ exit:
     return err;
 }
 
-
 /*
  * =============================
  * ========= 6. Locks ==========
@@ -580,14 +579,15 @@ static int do_lock(char *args)
 // ====================
 // ====================
 
-
 // ======= Sysfs ======
 
-static enum command parse_cmd(const char *buf, size_t count, char *str, cmd_func_t *func)
+static enum command parse_cmd(const char *buf, size_t count, char *str,
+                              cmd_func_t *func)
 {
     enum command op = UNKNOWN;
     for (uint i = 0; i < ARRAY_SIZE(str_to_op); i++) {
-        pr_debug("Comparing '%s' and '%s' (%ld)", str_to_op[i].name, buf, str_to_op[i].len);
+        pr_debug("Comparing '%s' and '%s' (%ld)", str_to_op[i].name, buf,
+                 str_to_op[i].len);
         if (!strncmp(str_to_op[i].name, buf, str_to_op[i].len - 1)) {
             op = str_to_op[i].op;
             *func = str_to_op[i].func;
@@ -603,9 +603,8 @@ static enum command parse_cmd(const char *buf, size_t count, char *str, cmd_func
     return op;
 }
 
-static ssize_t _sysfs_store(struct kobject *kobj,
-                            struct kobj_attribute *attr, const char *buf,
-                            size_t count)
+static ssize_t _sysfs_store(struct kobject *kobj, struct kobj_attribute *attr,
+                            const char *buf, size_t count)
 {
     char name[MAX_ENTRY_NAME] = { 0 };
     cmd_func_t func = NULL;
@@ -627,8 +626,8 @@ static ssize_t _sysfs_store(struct kobject *kobj,
     return err ? err : count;
 }
 
-static ssize_t _sysfs_show(struct kobject *kobj,
-                           struct kobj_attribute *attr, char *buf)
+static ssize_t _sysfs_show(struct kobject *kobj, struct kobj_attribute *attr,
+                           char *buf)
 {
     ssize_t ret = 0;
     struct list_head *e;
@@ -651,8 +650,8 @@ static const struct kobj_attribute control_entry_attr = {
     .store = _sysfs_store,
 };
 
-static ssize_t _test_show(struct kobject *kobj,
-                           struct kobj_attribute *attr, char *buf)
+static ssize_t _test_show(struct kobject *kobj, struct kobj_attribute *attr,
+                          char *buf)
 {
     ssize_t ret = 0;
 
@@ -660,7 +659,6 @@ static ssize_t _test_show(struct kobject *kobj,
 
     return ret;
 }
-
 
 static const struct kobj_attribute test_entry_attr = {
     .attr = {
@@ -675,7 +673,8 @@ static struct kobject *obj;
 static int __init hello_init(void)
 {
     int err;
-    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj, &control_entry_attr.attr))) {
+    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj,
+                                 &control_entry_attr.attr))) {
         pr_err("Can't create file in sysfs, err %d", err);
         goto err;
     }

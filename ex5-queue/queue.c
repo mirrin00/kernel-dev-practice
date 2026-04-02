@@ -1,4 +1,3 @@
-#include "asm-generic/errno-base.h"
 #include "linux/completion.h"
 #include "linux/container_of.h"
 #include "linux/jiffies.h"
@@ -61,7 +60,7 @@ struct __str_to_oper {
 };
 
 #define __STR_TO_OPER(name, op) { name, sizeof(name) - 1, op }
-#define STR_TO_OPER(name, op) __STR_TO_OPER(name": ", op)
+#define STR_TO_OPER(name, op) __STR_TO_OPER(name ": ", op)
 
 static struct __str_to_oper str_to_op[] = {
     STR_TO_OPER("insert", INSERT),
@@ -70,7 +69,7 @@ static struct __str_to_oper str_to_op[] = {
     STR_TO_OPER("run_bg", RUN_THREAD),
     STR_TO_OPER("self_dtr", SELF_DTR),
     STR_TO_OPER("ext_work", EXT_WORK),
-    {NULL, 0, UNKNOWN},
+    { NULL, 0, UNKNOWN },
 };
 
 #define MAX_ENTRY_NAME (40)
@@ -114,7 +113,7 @@ struct kmem_cache *entry_cache;
 
 #define free_entry(entry) __kmemcache_free_entry(entry)
 
-static struct my_entry * __make_entry(const char *name)
+static struct my_entry *__make_entry(const char *name)
 {
     // struct my_entry *entry = kzalloc(sizeof(*entry), GFP_KERNEL);
     struct my_entry *entry = kmem_cache_zalloc(entry_cache, GFP_KERNEL);
@@ -150,7 +149,7 @@ static int insert_to_queue(const char *name)
 
     if (IS_ERR(entry))
         return PTR_ERR(entry);
-    
+
     spin_lock(&queue_lock);
     list_add_tail(&entry->list, &my_queue);
     spin_unlock(&queue_lock);
@@ -334,10 +333,11 @@ static int self_dtr_insert(const char *name)
     }
 
     if (use_refcnt)
-        kref_get(&entry->refcnt);  // <<<<<
+        kref_get(&entry->refcnt); // <<<<<
 
     timer_setup(&entry->timer, self_dtr_cb, 0);
-    mod_timer(&entry->timer, jiffies + msecs_to_jiffies(delay));  // Not delay, time in the future
+    // Not delay, time in the future
+    mod_timer(&entry->timer, jiffies + msecs_to_jiffies(delay));
 
     // use irqsave, because timer interrupt can preemt syscall context
     spin_lock_irqsave(&queue_lock, flags);
@@ -357,13 +357,14 @@ struct __ext_work_struct {
 
 static void __do_external_work(struct work_struct *work)
 {
-    struct __ext_work_struct *ework = container_of(work, struct __ext_work_struct, work);
+    struct __ext_work_struct *ework =
+            container_of(work, struct __ext_work_struct, work);
     struct my_entry *e = ework->entry;
 
     MOD_INFO("Starting work at entry %p for %u", e, ework->delay);
     atomic_set(&e->state, ENTRY_UNDDER_WORK);
     msleep(ework->delay);
-    atomic_set(&e->state,ENTRY_END_WORK);
+    atomic_set(&e->state, ENTRY_END_WORK);
     complete_all(&e->work_end);
     MOD_INFO("Work for %p has ended", e);
 
@@ -391,7 +392,7 @@ static int work_with_entry(const char *name)
         delay = dins_ms;
     }
 
-    kref_get(&entry->refcnt);  // <<<<<<
+    kref_get(&entry->refcnt); // <<<<<<
     spin_lock(&queue_lock);
     list_add_tail(&entry->list, &my_queue);
     spin_unlock(&queue_lock);
@@ -410,7 +411,7 @@ static enum oper parse_cmd(const char *buf, size_t count, char *str)
 {
     struct __str_to_oper *cur = str_to_op;
     enum oper op = UNKNOWN;
-    while(cur->name) {
+    while (cur->name) {
         MOD_DEBUG("Comparing '%s' and '%s' %ld", cur->name, buf, cur->len);
         if (!strncmp(cur->name, buf, cur->len - 1)) {
             op = cur->op;
@@ -427,9 +428,8 @@ static enum oper parse_cmd(const char *buf, size_t count, char *str)
     return op;
 }
 
-static ssize_t work_store(struct kobject *kobj,
-                          struct kobj_attribute *attr, const char *buf,
-                          size_t count)
+static ssize_t work_store(struct kobject *kobj, struct kobj_attribute *attr,
+                          const char *buf, size_t count)
 {
     // Do some operations
     char name[MAX_ENTRY_NAME] = { 0 };
@@ -437,34 +437,34 @@ static ssize_t work_store(struct kobject *kobj,
     int err = 0;
 
     switch (op) {
-        case INSERT:
-            err = insert_to_queue(name);
-            break;
-        case DELAYED_INSERT:
-            err = delayed_insert(name);
-            break;
-        case SPAWN_MULTI:
-            err = spawn_multi(name);
-            break;
-        case RUN_THREAD:
-            wake_up_process(bg_thread);
-            break;
-        case SELF_DTR:
-            err = self_dtr_insert(name);
-            break;
-        case EXT_WORK:
-            err = work_with_entry(name);
-            break;
-        case UNKNOWN:
-            MOD_ERR("Unknown operation '%s'", buf);
-            err = -EINVAL;
-            break;
+    case INSERT:
+        err = insert_to_queue(name);
+        break;
+    case DELAYED_INSERT:
+        err = delayed_insert(name);
+        break;
+    case SPAWN_MULTI:
+        err = spawn_multi(name);
+        break;
+    case RUN_THREAD:
+        wake_up_process(bg_thread);
+        break;
+    case SELF_DTR:
+        err = self_dtr_insert(name);
+        break;
+    case EXT_WORK:
+        err = work_with_entry(name);
+        break;
+    case UNKNOWN:
+        MOD_ERR("Unknown operation '%s'", buf);
+        err = -EINVAL;
+        break;
     }
     return err ? err : count;
 }
 
-static ssize_t work_show(struct kobject *kobj,
-                         struct kobj_attribute *attr, char *buf)
+static ssize_t work_show(struct kobject *kobj, struct kobj_attribute *attr,
+                         char *buf)
 {
     // Show list
     ssize_t ret = 0, count = 0;
@@ -511,14 +511,16 @@ static int __init hello_init(void)
         goto dtr_wq;
     }
 
-    entry_cache = kmem_cache_create("entry_cache", sizeof(struct my_entry), NULL, SLAB_HWCACHE_ALIGN);
+    entry_cache = kmem_cache_create("entry_cache", sizeof(struct my_entry),
+                                    NULL, SLAB_HWCACHE_ALIGN);
     if (!entry_cache) {
         MOD_ERR("Failed to created mem cache");
         err = -EINVAL;
         goto dtr_thread;
     }
 
-    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj, &work_entry_attr.attr))) {
+    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj,
+                                 &work_entry_attr.attr))) {
         MOD_ERR("Can't create pid file in sysfs, err %d", err);
         goto dtr_cache;
     }

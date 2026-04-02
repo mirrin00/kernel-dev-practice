@@ -58,7 +58,8 @@ MODULE_PARM_DESC(my_ulong, "Ulong parameter example");
 module_param(my_bool, bool, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(my_bool, "Bool parameter example");
 
-static int set_range(const char *val, const struct kernel_param *kp) {
+static int set_range(const char *val, const struct kernel_param *kp)
+{
     int ival;
     int err = kstrtoint(val, 10, &ival);
     if (err) {

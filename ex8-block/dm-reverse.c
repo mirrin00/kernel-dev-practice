@@ -66,7 +66,8 @@ static void dmr_dtr(struct dm_target *ti)
     kfree(dmr);
 }
 
-__maybe_unused static void __reverse_buf(struct page *page, size_t offset, size_t len)
+__maybe_unused static void __reverse_buf(struct page *page, size_t offset,
+                                         size_t len)
 {
     u8 *data = page_address(page) + offset;
     for (size_t i = 0; i < len; i++)
@@ -78,7 +79,7 @@ static int dmr_map(struct dm_target *ti, struct bio *bio)
     struct dmr *dmr = ti->private;
     struct dmr_read *dmr_read = dm_per_bio_data(bio, sizeof(*dmr_read));
     struct bvec_iter iter;
-	struct bio_vec bv;
+    struct bio_vec bv;
 
     DMINFO("bio offset before=%llu", bio->bi_iter.bi_sector);
     DMINFO("bdev before: %s", bio->bi_bdev->bd_disk->disk_name);
@@ -92,7 +93,7 @@ static int dmr_map(struct dm_target *ti, struct bio *bio)
     }
 
     bio->bi_iter.bi_sector = dmr->size - bio->bi_iter.bi_sector - 1 -
-                            (bio->bi_iter.bi_size / dmr->lb_size);
+                             (bio->bi_iter.bi_size / dmr->lb_size);
     bio_set_dev(bio, dmr->dev->bdev);
 
     DMINFO("bio offset after=%llu", bio->bi_iter.bi_sector);
@@ -105,7 +106,7 @@ static int dmr_endio(struct dm_target *ti, struct bio *bio, blk_status_t *error)
 {
     struct dmr_read *dmr_read = dm_per_bio_data(bio, sizeof(*dmr_read));
     struct bvec_iter iter;
-	struct bio_vec bv;
+    struct bio_vec bv;
 
     if (*error || bio_op(bio) != REQ_OP_READ)
         return 0;
@@ -114,7 +115,8 @@ static int dmr_endio(struct dm_target *ti, struct bio *bio, blk_status_t *error)
 
     bio->bi_iter.bi_size = dmr_read->bi_size;
     bio_for_each_segment(bv, bio, iter) {
-        DMDEBUG("Buffrer %p offset %u len %u", bv.bv_page, bv.bv_offset, bv.bv_len);
+        DMDEBUG("Buffrer %p offset %u len %u", bv.bv_page, bv.bv_offset,
+                bv.bv_len);
         __reverse_buf(bv.bv_page, bv.bv_offset, bv.bv_len);
     }
     bio->bi_iter.bi_size = 0;
@@ -124,7 +126,7 @@ static int dmr_endio(struct dm_target *ti, struct bio *bio, blk_status_t *error)
 
 static struct target_type dmr_target = {
     .name = "reverse",
-    .version = {0, 0, 1},
+    .version = { 0, 0, 1 },
     .module = THIS_MODULE,
     .ctr = dmr_ctr,
     .dtr = dmr_dtr,

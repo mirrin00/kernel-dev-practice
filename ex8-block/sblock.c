@@ -32,7 +32,8 @@
 // ==== Helper funcs ====
 // ======================
 
-static void __fill_pattern(char *page, ulong lbsize, const char pattern[static 9])
+static void __fill_pattern(char *page, ulong lbsize,
+                           const char pattern[static 9])
 {
     const ulong size = lbsize / 8;
     for (ulong i = 0; i < size; i++) {
@@ -50,12 +51,12 @@ static void __fill_pattern(char *page, ulong lbsize, const char pattern[static 9
 static char __opf_to_char(enum req_op opf)
 {
     switch (opf) {
-        case REQ_OP_READ:
-            return 'r';
-        case REQ_OP_WRITE:
-            return 'w';
-        default:
-            return '?';
+    case REQ_OP_READ:
+        return 'r';
+    case REQ_OP_WRITE:
+        return 'w';
+    default:
+        return '?';
     }
 }
 
@@ -64,14 +65,17 @@ static void __show_bio_info(const struct bio *bio)
     MOD_INFO("== Bio information ==");
     MOD_INFO("  bio addr: %p", bio);
     MOD_INFO("  bio flags: 0x%x", bio->bi_flags);
-    MOD_INFO("  op flags: 0x%x (type=%c)", bio->bi_opf, __opf_to_char(bio_op(bio)));
+    MOD_INFO("  op flags: 0x%x (type=%c)", bio->bi_opf,
+             __opf_to_char(bio_op(bio)));
     MOD_INFO("  start sector: 0x%llx", bio->bi_iter.bi_sector);
     MOD_INFO("  bio size (in bytes): 0x%x", bio->bi_iter.bi_size);
     MOD_INFO("  blockdev: %s", bio->bi_bdev->bd_disk->disk_name);
     MOD_INFO("  private data: %p", bio->bi_private);
     MOD_INFO("  end_io: %ps", bio->bi_end_io);
-    MOD_INFO("  bvec count: %hu/%hu (actual/max)", bio->bi_vcnt, bio->bi_max_vecs);
-    MOD_INFO("  bvec array: %p/%p (actual/inline)", bio->bi_io_vec, bio->bi_inline_vecs);
+    MOD_INFO("  bvec count: %hu/%hu (actual/max)", bio->bi_vcnt,
+             bio->bi_max_vecs);
+    MOD_INFO("  bvec array: %p/%p (actual/inline)", bio->bi_io_vec,
+             bio->bi_inline_vecs);
 }
 
 // ========================
@@ -106,17 +110,20 @@ static int do_show_dev_info(char *args)
     MOD_INFO("== Block device info ==");
     MOD_INFO("  bdev: %p", bdev);
     MOD_INFO("  name: %s", bdev->bd_disk->disk_name);
-    MOD_INFO("  major/minor: %hu:%hu", MAJOR(bdev->bd_dev), MINOR(bdev->bd_dev));
+    MOD_INFO("  major/minor: %hu:%hu", MAJOR(bdev->bd_dev),
+             MINOR(bdev->bd_dev));
     MOD_INFO("  holder: %p", bdev->bd_holder);
     MOD_INFO("  start sector: 0x%llx", bdev->bd_start_sect);
     MOD_INFO("  sector count: 0x%llx", bdev->bd_nr_sectors);
     MOD_INFO("  sector size: %u", bdev_logical_block_size(bdev));
     MOD_INFO("  max discard sectors: %u", bdev_max_discard_sectors(bdev));
-    MOD_INFO("  partno/is_part: %u/%u", bdev_partno(bdev), bdev_is_partition(bdev));
+    MOD_INFO("  partno/is_part: %u/%u", bdev_partno(bdev),
+             bdev_is_partition(bdev));
     MOD_INFO("  read-only: %u", bdev_read_only(bdev));
     MOD_INFO("  rotational: %u", !bdev_nonrot(bdev));
     intg = bdev_get_integrity(bdev);
-    MOD_INFO("  integrity: %s", intg ? blk_integrity_profile_name(intg) : "nop");
+    MOD_INFO("  integrity: %s",
+             intg ? blk_integrity_profile_name(intg) : "nop");
 
 err:
     if (f)
@@ -161,7 +168,7 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
     struct page *intg_page = NULL;
 
     f = bdev_file_open_by_path(dev_name, write ? BLK_OPEN_WRITE : BLK_OPEN_READ,
-                        NULL, NULL);
+                               NULL, NULL);
     if (IS_ERR(f)) {
         err = PTR_ERR(f);
         f = NULL;
@@ -172,9 +179,9 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
     lbsize = bdev_logical_block_size(bdev);
     MOD_INFO("Block size: %u", lbsize);
 
-    bio_write = bio_alloc(bdev, 1, write ? REQ_OP_WRITE : REQ_OP_READ,
-                GFP_KERNEL);
-    
+    bio_write =
+            bio_alloc(bdev, 1, write ? REQ_OP_WRITE : REQ_OP_READ, GFP_KERNEL);
+
     bio_write->bi_iter.bi_sector = start_sec;
 
     page = alloc_page(GFP_KERNEL);
@@ -185,7 +192,7 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
 
     data_addr = page_address(page);
 
-    if(!bio_add_page(bio_write, page, lbsize, 0)) {
+    if (!bio_add_page(bio_write, page, lbsize, 0)) {
         MOD_ERR("Failed to add page to bio");
         goto err;
     }
@@ -206,7 +213,8 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
             memcpy(page_address(intg_page), &t10, sizeof(t10));
         }
 
-        bio_integrity_add_page(bio_write, intg_page, sizeof(struct t10_pi_tuple), 0);
+        bio_integrity_add_page(bio_write, intg_page,
+                               sizeof(struct t10_pi_tuple), 0);
     }
 
     // Setup end_request
@@ -230,12 +238,15 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
     if (!write && intg) {
         struct t10_pi_tuple t10;
         memcpy(&t10, page_address(intg_page), sizeof(t10));
-        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx", t10.guard_tag, t10.app_tag, t10.ref_tag);
+        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx", t10.guard_tag,
+                 t10.app_tag, t10.ref_tag);
     }
 
 err:
+    if (intg_page)
+        free_page((ulong)page_address(intg_page));
     if (page)
-        free_page((ulong) data_addr);
+        free_page((ulong)data_addr);
     if (f)
         fput(f);
     return err;
@@ -251,7 +262,8 @@ static int do_write(char *args)
     err = sscanf(args, "%47s %lld %8s", dev_name, &sec, pattern);
     if (err == 3) {
         err = 0;
-        MOD_INFO("write, arguments dev=%s sector=%lld pattern=%s", dev_name, sec, pattern);
+        MOD_INFO("write, arguments dev=%s sector=%lld pattern=%s", dev_name,
+                 sec, pattern);
     } else {
         return -EINVAL;
     }
@@ -302,10 +314,11 @@ static int do_multi_add(char *args)
     char pattern[9] = { 0 };
     struct multi_data *d = NULL;
 
-    err = sscanf(args, "%lu %8s",&pg_count, pattern);
+    err = sscanf(args, "%lu %8s", &pg_count, pattern);
     if (err == 2) {
         err = 0;
-        MOD_INFO("chain add, arguments pg_count=%lu pattern=%s", pg_count, pattern);
+        MOD_INFO("chain add, arguments pg_count=%lu pattern=%s", pg_count,
+                 pattern);
     } else {
         return -EINVAL;
     }
@@ -363,7 +376,7 @@ static int do_multi_clear(char *args)
         list_del(&d->list);
         kref_put(&d->kref, __clear_multi_data);
     }
-    
+
     return err;
 }
 
@@ -388,8 +401,7 @@ static int do_multi_write(char *args)
         return -EINVAL;
     }
 
-    f = bdev_file_open_by_path(dev_name, BLK_OPEN_WRITE,
-                        NULL, NULL);
+    f = bdev_file_open_by_path(dev_name, BLK_OPEN_WRITE, NULL, NULL);
     if (IS_ERR(f)) {
         err = PTR_ERR(f);
         f = NULL;
@@ -414,7 +426,8 @@ static int do_multi_write(char *args)
             goto err;
         }
 
-        bio = bio_alloc_bioset(bdev, list_size, REQ_OP_WRITE, GFP_ATOMIC, sb_bset);
+        bio = bio_alloc_bioset(bdev, list_size, REQ_OP_WRITE, GFP_ATOMIC,
+                               sb_bset);
         bio->bi_iter.bi_sector = offset;
         list_for_each_entry(d, &multi_list, list) {
             kref_get(&d->kref);
@@ -480,7 +493,8 @@ static int do_chain_add(char *args)
     err = sscanf(args, "%d %lld %8s", &type, &offset, pattern);
     if (err == 3) {
         err = 0;
-        MOD_INFO("chain add, arguments type=%d sector=%lld pattern=%s", type, offset, pattern);
+        MOD_INFO("chain add, arguments type=%d sector=%lld pattern=%s", type,
+                 offset, pattern);
     } else {
         return -EINVAL;
     }
@@ -561,8 +575,8 @@ static int do_chain_bio(char *args)
         return -EINVAL;
     }
 
-    f = bdev_file_open_by_path(dev_name, BLK_OPEN_WRITE | BLK_OPEN_READ,
-                        NULL, NULL);
+    f = bdev_file_open_by_path(dev_name, BLK_OPEN_WRITE | BLK_OPEN_READ, NULL,
+                               NULL);
     if (IS_ERR(f)) {
         err = PTR_ERR(f);
         f = NULL;
@@ -591,11 +605,13 @@ static int do_chain_bio(char *args)
             kref_get(&d->kref);
             arr[cur_idx++] = d;
 
-            struct bio *bio = bio_alloc_bioset(bdev, 1, d->is_write ? REQ_OP_WRITE : REQ_OP_READ,
-                                               GFP_ATOMIC, sb_bset);
+            struct bio *bio = bio_alloc_bioset(
+                    bdev, 1, d->is_write ? REQ_OP_WRITE : REQ_OP_READ,
+                    GFP_ATOMIC, sb_bset);
             bio->bi_iter.bi_sector = d->offset;
             if (bio_add_page(bio, d->page, PAGE_SIZE, 0) != PAGE_SIZE) {
-                MOD_WARN("Failed to add page for offset %lld (is_write=%d)", d->offset, d->is_write);
+                MOD_WARN("Failed to add page for offset %lld (is_write=%d)",
+                         d->offset, d->is_write);
             }
             if (head_bio) {
                 // Somewhy it can cause kmemleaks (maybe fake) on integrity devices
@@ -637,7 +653,7 @@ static int do_chain_print_read(char *args)
     char *data;
     char str[32 + 4];
     uint str_idx;
-    
+
     memset(str, ' ', sizeof(str));
     str[35] = '\0';
 
@@ -714,7 +730,7 @@ __maybe_unused static void sblock_process_sgt(struct sg_table *sgt)
 static void sblock_submit_bio(struct bio *bio)
 {
     struct bvec_iter b_iter;
-	struct bio_vec bv;
+    struct bio_vec bv;
 
     uint nents = bio->bi_vcnt;
     int err;
@@ -722,7 +738,7 @@ static void sblock_submit_bio(struct bio *bio)
     struct sg_table sgt;
 
     err = sg_alloc_table(&sgt, nents, GFP_KERNEL);
-    
+
     if (err) {
         bio->bi_status = BLK_STS_IOERR;
         bio_endio(bio);
@@ -807,7 +823,7 @@ static int do_create_blk(char *args)
     disk->major = 0;
     disk->first_minor = 0;
     disk->minors = 0;
-    disk->flags |= GENHD_FL_NO_PART;  // no parts ^)
+    disk->flags |= GENHD_FL_NO_PART; // no parts ^)
     disk->private_data = blk;
 
     set_capacity(disk, SBLOCK_CAP);
@@ -861,8 +877,8 @@ static int do_remove_blk(char *args)
                     blk = cur;
                     break;
                 } else {
-                    MOD_ERR("Device %s is hold by someone, cur=%d",
-                            dev_name, atomic_read(&cur->opens));
+                    MOD_ERR("Device %s is hold by someone, cur=%d", dev_name,
+                            atomic_read(&cur->opens));
                     return -EPERM;
                 }
             }
@@ -883,8 +899,8 @@ static int do_remove_blk(char *args)
 
 typedef int (*cmd_func_t)(char *args);
 
-#define __STR_TO_command(name, f) { name, sizeof(name) - 1, f}
-#define STR_TO_command(name, f) __STR_TO_command(name" ", f)
+#define __STR_TO_command(name, f) { name, sizeof(name) - 1, f }
+#define STR_TO_command(name, f) __STR_TO_command(name " ", f)
 
 static struct {
     const char *name;
@@ -911,7 +927,8 @@ static cmd_func_t parse_cmd(const char *buf, size_t count, char *str)
 {
     cmd_func_t res = NULL;
     for (uint i = 0; i < ARRAY_SIZE(str_to_op); i++) {
-        pr_debug("Comparing '%s' and '%s' (%ld)", str_to_op[i].name, buf, str_to_op[i].len);
+        MOD_DEBUG("Comparing '%s' and '%s' (%ld)", str_to_op[i].name, buf,
+                  str_to_op[i].len);
         if (!strncmp(str_to_op[i].name, buf, str_to_op[i].len - 1)) {
             res = str_to_op[i].func;
             buf += str_to_op[i].len;
@@ -926,9 +943,8 @@ static cmd_func_t parse_cmd(const char *buf, size_t count, char *str)
     return res;
 }
 
-static ssize_t _sysfs_store(struct kobject *kobj,
-                            struct kobj_attribute *attr, const char *buf,
-                            size_t count)
+static ssize_t _sysfs_store(struct kobject *kobj, struct kobj_attribute *attr,
+                            const char *buf, size_t count)
 {
     int err = 0;
     char args[MAX_ENTRY_NAME];
@@ -946,8 +962,8 @@ static ssize_t _sysfs_store(struct kobject *kobj,
 
 #define CHARS_PER_LINE (8)
 
-static ssize_t _sysfs_show(struct kobject *kobj,
-                           struct kobj_attribute *attr, char *buf)
+static ssize_t _sysfs_show(struct kobject *kobj, struct kobj_attribute *attr,
+                           char *buf)
 {
     ssize_t ret = 0;
     ssize_t data_size = READ_DATA_SIZE;
@@ -975,7 +991,8 @@ static int __init block_init(void)
 {
     int err = 0;
 
-    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj, &control_entry_attr.attr))) {
+    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj,
+                                 &control_entry_attr.attr))) {
         MOD_ERR("Can't create file in sysfs, err %d", err);
         return err;
     }

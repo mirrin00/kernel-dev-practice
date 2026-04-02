@@ -28,16 +28,14 @@ struct search_task {
 
     int cpu;
     int prior;
-	int sprior;
-	int nprior;
-	uint rtprior;
+    int sprior;
+    int nprior;
+    uint rtprior;
 
     uint state;
 
     bool found;
 };
-
-
 
 enum search_types {
     SEARCH_BY_PID = 0,
@@ -52,9 +50,12 @@ static ssize_t print_task(struct search_task *info, char *buf)
         ret += sysfs_emit_at(buf, ret, "    name=%16s\n", info->name);
         ret += sysfs_emit_at(buf, ret, "    pid=%d tgid=%d ppid=%d\n",
                              info->pid, info->tgid, info->ppid);
-        ret += sysfs_emit_at(buf, ret, "    prior=%d sprior=%d nprior=%d rtprior=%u\n",
-                             info->prior, info->sprior, info->nprior, info->rtprior);
-        ret += sysfs_emit_at(buf, ret, "    cpu=%d state=0x%x\n", info->cpu, info->state);
+        ret += sysfs_emit_at(buf, ret,
+                             "    prior=%d sprior=%d nprior=%d rtprior=%u\n",
+                             info->prior, info->sprior, info->nprior,
+                             info->rtprior);
+        ret += sysfs_emit_at(buf, ret, "    cpu=%d state=0x%x\n", info->cpu,
+                             info->state);
     } else {
         ret += sysfs_emit(buf, "Pid %d not found\n", info->pid);
     }
@@ -66,7 +67,8 @@ static void search_task(struct search_task *info, enum search_types stype)
 {
     struct task_struct *leader, *cur_task;
 
-    trace_printk("My tracepoint at search_task info{ %d, %16s }\n", info->pid, info->name);
+    trace_printk("My tracepoint at search_task info{ %d, %16s }\n", info->pid,
+                 info->name);
     rcu_read_lock();
 
     for_each_process_thread(leader, cur_task) {
@@ -93,7 +95,6 @@ static void search_task(struct search_task *info, enum search_types stype)
 
         if (info->found)
             goto found;
-
     }
 
 found:
@@ -149,7 +150,7 @@ static ssize_t name_search_store(struct kobject *kobj,
                                  struct kobj_attribute *attr, const char *buf,
                                  size_t count)
 {
-    size_t len = strlen(buf) - 1;  // -1 for \n
+    size_t len = strlen(buf) - 1; // -1 for \n
 
     if (len > TASK_COMM_LEN) {
         EX3_WARN("Too long name, len is %lu", len);
@@ -180,7 +181,8 @@ static int __init hello_init(void)
     EX3_WARN("Hello, my first WARN");
     EX3_ERR("Hello, my first ERR");
 
-    example_kobject = kobject_create_and_add("search", &THIS_MODULE->mkobj.kobj);
+    example_kobject =
+            kobject_create_and_add("search", &THIS_MODULE->mkobj.kobj);
 
     if (!example_kobject) {
         EX3_ERR("Can't create kobject");
@@ -213,7 +215,7 @@ static void __exit hello_exit(void)
     if (example_kobject) {
         sysfs_remove_file(example_kobject, &pid_search_attr.attr);
         sysfs_remove_file(example_kobject, &name_search_attr.attr);
-        kobject_put(example_kobject);  
+        kobject_put(example_kobject);
     }
     EX3_INFO("Module unloaded");
 }

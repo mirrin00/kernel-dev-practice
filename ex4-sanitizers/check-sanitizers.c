@@ -33,8 +33,8 @@ static char *arr;
 DEFINE_MUTEX(arr_lock);
 // struct mutex arr_lock;
 
-static ssize_t work_show(struct kobject *kobj,
-                         struct kobj_attribute *attr, char *buf)
+static ssize_t work_show(struct kobject *kobj, struct kobj_attribute *attr,
+                         char *buf)
 {
     strncpy(buf, arr, arr_size);
     return arr_size;
@@ -49,14 +49,16 @@ static int check_arr_size(void)
         return 0;
 
     // krealloc can be used here
-    narr = test_bit(LOCKDEP_ERR2, &error_type) ? MOD_WARN("LOCKDEP ERR Type 2 is enanbled"), NULL\
-        : kzalloc(user_arr_size, GFP_KERNEL);
+    narr = test_bit(LOCKDEP_ERR2, &error_type) ?
+            MOD_WARN("LOCKDEP ERR Type 2 is enanbled"),
+    NULL : kzalloc(user_arr_size, GFP_KERNEL);
     if (!narr)
         return -ENOMEM;
     memcpy(narr, arr, arr_size);
     // Look at here
-    test_bit(MEMLEAK_ERR, &error_type) ? arr = narr, MOD_WARN("MEMLEAK ERR is enanbled")\
-        : kfree(arr), arr = narr;
+    test_bit(MEMLEAK_ERR, &error_type) ? arr = narr,
+                                         MOD_WARN("MEMLEAK ERR is enanbled") :
+                                         kfree(arr), arr = narr;
     arr_size = user_arr_size;
     return 0;
 }
@@ -85,9 +87,8 @@ err_update:
     return err;
 }
 
-static ssize_t work_store(struct kobject *kobj,
-                          struct kobj_attribute *attr, const char *buf,
-                          size_t count)
+static ssize_t work_store(struct kobject *kobj, struct kobj_attribute *attr,
+                          const char *buf, size_t count)
 {
     int err;
     size_t new_count;
@@ -123,7 +124,8 @@ static int __init hello_init(void)
         goto init_err;
     }
 
-    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj, &work_entry_attr.attr))) {
+    if ((err = sysfs_create_file(&THIS_MODULE->mkobj.kobj,
+                                 &work_entry_attr.attr))) {
         MOD_ERR("Can't create pid file in sysfs, err %d", err);
         goto init_err;
     }
