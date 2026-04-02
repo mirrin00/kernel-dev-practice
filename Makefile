@@ -43,7 +43,7 @@ ROOTFS_ALPINE_SCRIPT := $(WORK_DIR)/rootfs-files/alpine/setup.sh
 ALPINE_MAKE_ROOTFS_TAR := alpine-make-rootfs-$(ALPINE_MAKE_ROOTFS_VER).tar.gz
 ROOTFS_ALPINE_MAKE_PATH := $(BUILD_DIR)/alpine-make-rootfs-$(ALPINE_MAKE_ROOTFS_VER)
 
-ROOTFS_ALPINE_PACKAGES := "openrc-init alpine-base fish python3 openssh-server vim"
+ROOTFS_ALPINE_PACKAGES := "openrc-init alpine-base fish python3 openssh-server vim device-mapper lsblk"
 
 # === qemu/ssh options ===
 QEMU_SSH_PORT ?= 2222
@@ -64,9 +64,14 @@ TMP_HOME_SIZE := 20M
 # VVV simple usage
 QEMU_DRIVES := -drive file=$(TMP_HOME),if=none,id=home -device virtio-blk,drive=home
 QEMU_EXT_DRIVE_PATH ?= /tmp/disk.data
-QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device virtio-blk,drive=extd
-# See https://qemu-project.gitlab.io/qemu/system/devices/nvme.html
-# QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device nvme,id=nvme-ctrl-0,serial=deadbeef -device nvme-ns,drive=extd,logical_block_size=4096,physical_block_size=4096,ms=8,pi=1
+QEMU_EXT_DRIVE_TYPE ?= nvme
+QEMU_EXT_DRIVE_SIZE := 32M
+ifeq ($(strip $(QEMU_EXT_DRIVE_TYPE)),nvme)
+    # See https://qemu-project.gitlab.io/qemu/system/devices/nvme.html
+	QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device nvme,id=nvme-ctrl-0,serial=deadbeef -device nvme-ns,drive=extd,logical_block_size=4096,physical_block_size=4096,ms=8,pi=3
+else
+	QEMU_DRIVES += -drive file=$(QEMU_EXT_DRIVE_PATH),if=none,id=extd -device virtio-blk,drive=extd
+endif
 
 # === Modules options ===
 MODULE_NAME ?=
@@ -166,6 +171,9 @@ $(TMP_HOME):
 # 	qemu-img create -f raw $(TMP_HOME) $(TMP_HOME_SIZE)
 # 	mkfs.ext4 $(TMP_HOME)
 
+create-tmp-disk:
+	qemu-img create -f raw $(QEMU_EXT_DRIVE_PATH) $(QEMU_EXT_DRIVE_SIZE)
+
 create-tmp-home: $(TMP_HOME)
 busybox: $(BUSYBOX_PATH)/_install
 dropbear: $(DROPBEAR_PATH)/_install
@@ -173,7 +181,7 @@ ramfs-busybox: $(RAMFS_BB_IMAGE)
 remove-ramfs-busybox:
 	rm -f $(RAMFS_BB_IMAGE)
 
-.PHONY: busybox ramfs-busybox dropbear remove-ramfs-busybox create-tmp-root
+.PHONY: busybox ramfs-busybox dropbear remove-ramfs-busybox create-tmp-root create-tmp-disk
 
 # === Make rootfs with alpine ===
 
