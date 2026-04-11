@@ -49,6 +49,13 @@ rootfs-rebuild-alpine:
 	{{ docker-make }} remove-rootfs-alpine
 	{{ docker-make }} rootfs-alpine
 
+rootfs-debian:
+	{{ docker-make }} rootfs-debian
+
+rootfs-rebuild-debian:
+	{{ docker-make }} remove-rootfs-debian
+	{{ docker-make }} rootfs-debian
+
 # === Module commands ===
 
 module-build module-dir module-name:

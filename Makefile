@@ -45,6 +45,13 @@ ROOTFS_ALPINE_MAKE_PATH := $(BUILD_DIR)/alpine-make-rootfs-$(ALPINE_MAKE_ROOTFS_
 
 ROOTFS_ALPINE_PACKAGES := "openrc-init alpine-base fish python3 openssh-server vim device-mapper lsblk"
 
+# === debian rootfs ===
+ROOTFS_DEBIAN_ROOTFS_PATH := $(BUILD_DIR)/rootfs-debian
+ROOTFS_DEBIAN_IMG_PATH := $(BUILD_DIR)/rootfs-debian.img
+ROOTFS_DEBIAN_SCRIPT := $(WORK_DIR)/rootfs-files/debian/setup.sh
+
+ROOTFS_DEBIAN_PACKAGES := "fish,python3,openssh-server,vim,dmsetup,blktrace,liburing-dev,liburing2"
+
 # === qemu/ssh options ===
 QEMU_SSH_PORT ?= 2222
 QEMU_MEMORY ?= 512m
@@ -83,6 +90,7 @@ MODULE_PATH := $(MODULE_DIRPATH)/$(MODULE_KO)
 # === Other vars ===
 NPROC := $(shell nproc)
 RSYNC := rsync -r -u -l --progress
+MAKE_FS := virt-make-fs -F qcow2 -s +100M -t ext4 --blocksize=512
 INSTALL_MODULES ?=
 RUN_IMAGE_CODENAME ?=
 
@@ -91,7 +99,7 @@ ifeq ($(strip $(RUN_IMAGE_CODENAME)),busybox)
 else ifeq ($(strip $(RUN_IMAGE_CODENAME)),alpine)
 	QEMU_IMG_OPTS := -hda $(ROOTFS_ALPINE_IMG_PATH)
 else ifeq ($(RUN_IMAGE_CODENAME),debian)
-	QEMU_IMG_OPTS := -hda TODO
+	QEMU_IMG_OPTS := -hda $(ROOTFS_DEBIAN_IMG_PATH)
 endif
 
 all:
@@ -203,7 +211,7 @@ $(ROOTFS_ALPINE_IMG_PATH): $(ROOTFS_ALPINE_ROOTFS_PATH)
 ifneq ($(strip $(INSTALL_MODULES)),)
 	make -C $(KERNEL_PATH) INSTALL_MOD_PATH=$(ROOTFS_ALPINE_ROOTFS_PATH) modules_install
 endif
-	virt-make-fs -F qcow2 -s +100M -t ext4 --blocksize=512 $(ROOTFS_ALPINE_ROOTFS_PATH) $(ROOTFS_ALPINE_IMG_PATH)
+	$(MAKE_FS) $(ROOTFS_ALPINE_ROOTFS_PATH) $(ROOTFS_ALPINE_IMG_PATH)
 
 rootfs-alpine: $(ROOTFS_ALPINE_IMG_PATH)
 remove-rootfs-alpine-dir:
@@ -212,7 +220,24 @@ remove-rootfs-alpine:
 	rm -f $(ROOTFS_ALPINE_IMG_PATH)
 
 # === Make rootfs with debootstrap ===
-# TODO
+
+$(ROOTFS_DEBIAN_ROOTFS_PATH):
+	mkdir -p $(ROOTFS_DEBIAN_ROOTFS_PATH)
+	fakechroot debootstrap --include=$(ROOTFS_DEBIAN_PACKAGES) --variant=fakechroot trixie \
+		$(ROOTFS_DEBIAN_ROOTFS_PATH) https://deb.debian.org/debian
+	$(ROOTFS_DEBIAN_SCRIPT) $(ROOTFS_DEBIAN_ROOTFS_PATH)
+
+$(ROOTFS_DEBIAN_IMG_PATH): $(ROOTFS_DEBIAN_ROOTFS_PATH)
+ifneq ($(strip $(INSTALL_MODULES)),)
+	make -C $(KERNEL_PATH) INSTALL_MOD_PATH=$(ROOTFS_DEBIAN_ROOTFS_PATH) modules_install
+endif
+	$(MAKE_FS) $(ROOTFS_DEBIAN_ROOTFS_PATH) $(ROOTFS_DEBIAN_IMG_PATH)
+
+rootfs-debian: $(ROOTFS_DEBIAN_IMG_PATH)
+remove-rootfs-debian-dir:
+	rm -rf $(ROOTFS_DEBIAN_ROOTFS_PATH)
+remove-rootfs-debian:
+	rm -f $(ROOTFS_DEBIAN_IMG_PATH)
 
 # === Modules commands ===
 
