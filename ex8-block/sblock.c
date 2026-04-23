@@ -2,6 +2,7 @@
 #include "linux/blk-integrity.h"
 #include "linux/blk_types.h"
 #include "linux/blkdev.h"
+#include "linux/byteorder/generic.h"
 #include "linux/cleanup.h"
 #include "linux/completion.h"
 #include "linux/container_of.h"
@@ -205,9 +206,10 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
         intg_page = alloc_page(GFP_KERNEL);
         if (write) {
             struct t10_pi_tuple t10 = {
-                .guard_tag = crc_t10dif(data_addr, lbsize),
-                .ref_tag = 0,
-                .app_tag = 0xDEAD,
+                // do not forget to convert values to be
+                .guard_tag = cpu_to_be16(crc_t10dif(data_addr, lbsize)),
+                .ref_tag = cpu_to_be32(0xCAFE),
+                .app_tag = cpu_to_be16(0xDEAD),
             };
 
             memcpy(page_address(intg_page), &t10, sizeof(t10));
@@ -238,8 +240,8 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
     if (!write && intg) {
         struct t10_pi_tuple t10;
         memcpy(&t10, page_address(intg_page), sizeof(t10));
-        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx", t10.guard_tag,
-                 t10.app_tag, t10.ref_tag);
+        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx", be16_to_cpu(t10.guard_tag),
+                 be16_to_cpu(t10.app_tag), be32_to_cpu(t10.ref_tag));
     }
 
 err:
@@ -614,8 +616,7 @@ static int do_chain_bio(char *args)
                          d->offset, d->is_write);
             }
             if (head_bio) {
-                // Somewhy it can cause kmemleaks (maybe fake) on integrity devices
-                bio_chain(bio, head_bio);
+                bio_chain(head_bio, bio);
                 submit_bio(head_bio);
             }
             head_bio = bio;
