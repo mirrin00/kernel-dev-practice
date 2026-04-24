@@ -240,8 +240,9 @@ static int do_bio(const char *dev_name, sector_t start_sec, bool write,
     if (!write && intg) {
         struct t10_pi_tuple t10;
         memcpy(&t10, page_address(intg_page), sizeof(t10));
-        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx", be16_to_cpu(t10.guard_tag),
-                 be16_to_cpu(t10.app_tag), be32_to_cpu(t10.ref_tag));
+        MOD_INFO("Integrity data: crc=%hx app=%hx ref=%hx",
+                 be16_to_cpu(t10.guard_tag), be16_to_cpu(t10.app_tag),
+                 be32_to_cpu(t10.ref_tag));
     }
 
 err:
@@ -760,7 +761,7 @@ static void sblock_submit_bio(struct bio *bio)
     bio_endio(bio);
 }
 
-static struct block_device_operations sblk_ops = {
+static const struct block_device_operations sblk_ops = {
     .owner = THIS_MODULE,
     .open = sblock_open,
     .release = sblock_release,
@@ -903,7 +904,7 @@ typedef int (*cmd_func_t)(char *args);
 #define __STR_TO_command(name, f) { name, sizeof(name) - 1, f }
 #define STR_TO_command(name, f) __STR_TO_command(name " ", f)
 
-static struct {
+static const struct {
     const char *name;
     size_t len;
     cmd_func_t func;

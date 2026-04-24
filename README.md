@@ -184,9 +184,208 @@ qemu-system-x86_64 -smp cpus=4 -m 256m -cpu host -nographic -kernel /wspc/linux-
 4. Use `make modules_install` to install compiled modules
     1. For your own rootfs look at the `install_modules` in `justfile` and `INSTALL_MODULES` in `Makefile`
 
+# Practice 2 & 3
+
+## Tracepoints
+
+1. [Ftrace](https://www.kernel.org/doc/html/latest/trace/ftrace.html)
+    1. Compile the kernel with ftrace support, see [`config.ftrace` config](./config.ftrace)
+    2. Enable tracing (function or function_graph)
+    3. Trace some kernel events (e.g. `ksys_read,write`)
+2. Make your own tracepoints with trace_printk
+3. Define a trace point with `TRACE_EVENT` macro (see [details](https://lwn.net/Articles/379903/))
+    1. Be careful, it is required separate header file!
+
+## Modules
+
+### Module 3: dynamic debug & tracepoint usage
+
+* [Module `pid-info` (dir ex3-pid-info)](./ex3-pid-info/)
+* To use [dynamic debug](https://www.kernel.org/doc/html/latest/admin-guide/dynamic-debug-howto.html):
+    * Enable dynamic debug (`CONFIG_DYNAMIC_DEBUG` option) in the kernel config.
+      See [`config.ddebug` config](./config.ddebug)
+    * Recompile the kernel
+    * Activate debug messages in the module via `/proc/dynamic_debug/contol`
+* Tracepoints: [see section with tracepoints](#tracepoints)
+
+### Module 4: sanitizers
+
+* [Module `check-sanitizers` (dir ex4-sanitizers)](./ex4-sanitizers/), [`config.san` config](./config.san)
+* [KASAN](https://www.kernel.org/doc/html/latest/dev-tools/kasan.html)
+    * Detects memory access bugs: use-after-free, double free, out of bounds access, ...
+    * Enable `CONFIG_KASAN` option in the kernel config
+    * Add the `kasan_multi_shot=Y` argument to the kernel load
+      so that it does not go silent after the first error
+    * Very strong impact on system performance
+* [KMEMLEAK](https://www.kernel.org/doc/html/latest/dev-tools/kmemleak.html)
+    * Detects memory leaks
+    * Enable `CONFIG_DEBUG_KMEMLEAK` option in the kernel config
+    * Run `echo scan > /sys/kernel/debug/kmemleak` to trigger a memory leak search
+    * Run `cat /sys/kernel/debug/kmemleak` to get information about memory leaks found
+* [LOCKDEP](https://www.kernel.org/doc/html/latest/locking/lockdep-design.html)
+    * Detects bugs in locking: deadlocks, missing lock, lock correctness, ...
+    * Enable `CONFIG_LOCKDEP` option in the kernel config
+    * Use the `lockdep_assert_held*` family of macro to increase lockdep strength
+
+Check out [syzkaller](https://github.com/google/syzkaller) about kernel fuzzing.
+It is very exciting
+
+### Module livecode: simple common kernel API
+
+* [Module `livecode` (dir livecode)](./livecode/)
+* [Memory allocation](https://www.kernel.org/doc/html/latest/core-api/memory-allocation.html):
+    * For most cases: `kmalloc`/`kzalloc`/`kcalloc`
+    * For some cases: `vmalloc`
+    * To allocate many identical objects: [kmemcache](https://www.kernel.org/doc/html/latest/core-api/mm-api.html#c.kmem_cache_create)
+* [Strings](https://www.kernel.org/doc/html/latest/core-api/kernel-api.html#string-conversions):
+    * `sscanf`
+    * `strto*` family of functions
+* [List](https://docs.kernel.org/core-api/list.html)
+    * The basic structure that links the entities together
+    * Use `list_for_each` family of macro to iterate over list
+    * Supports rcu locking
+* [Atomic operations](https://www.kernel.org/doc/html/latest/core-api/wrappers/atomic_t.html)
+    * `atomic_t`
+    * Basic operations: `atomic_set`, `atomic_read`, `atomic_inc`, ...
+    * Advanced operations: `atomic_cmpxchg`, `atomic_fetch_add`, `atomic_inc_not_zero`, ...
+    * Bit operations: `set_bit`, `test_bit`, `clean_bit`
+* [Kthread](https://www.kernel.org/doc/html/latest/driver-api/basics.html#c.kthread_create)
+    * New schedulable entity
+    * Use `kthread_create` or `kthread_run` to create a new kthread
+    * Use `kthread_should_stop` to check if a thread should be stopped
+* [Workqueue](https://www.kernel.org/doc/html/latest/core-api/workqueue.html)
+    * Defer work to another context
+    * Module workqueues and system workqueues
+    * Normal `work_struct` to defer work to another context
+    * Delayed `delayed_work` to defer work for a while
+* [Sleep](https://www.kernel.org/doc/html/latest/timers/delay_sleep_functions.html):
+    * Wait a certain amount of time
+    * For most cases: `delay`/`msleep`
+    * Timers with callback (irq context)
+* [Completion](https://www.kernel.org/doc/html/latest/scheduler/completion.html)
+    * Wait for some event
+    * A `wait_for_completion*` family of functions for a variety of situations
+    * Use `complete` to wake up only one waiter and `complete_all` to wake up all waiters
+* [Refcnt](https://www.kernel.org/doc/html/latest/core-api/kref.html)
+    * Control the lifetime of the object
+    * Basic `+1` in constructor and `-1` in destructor
+    * Pin an object (_may be under lock_) before use
+* [Locking](https://www.kernel.org/doc/html/latest/kernel-hacking/locking.html) ([link2](https://www.kernel.org/doc/html/latest/locking/locktypes.html))
+    * Protect a critical section from concurrent access/modification
+    * spinlock, mutex, semaphor, rwlock, [seqlock](https://docs.kernel.org/locking/seqlock.html)
+    * [Read-Copy-Update](https://www.kernel.org/doc/html/latest/RCU/whatisRCU.html)
+* Not considered, but worth mentioning:
+    * [Wait Queues](https://www.kernel.org/doc/html/v7.0/kernel-hacking/hacking.html#wait-queues-include-linux-wait-h)
+    * [Tasklets](https://www.kernel.org/doc/html/v7.0/kernel-hacking/hacking.html#software-interrupt-context-softirqs-and-tasklets)
+    * `struct sbitmap` (`linux/sbitmap.h`)
+    * [Memory barriers](https://www.kernel.org/doc/html/latest/core-api/wrappers/memory-barriers.html)
+    * `alloc_pages`
+    * [DMA](https://www.kernel.org/doc/html/latest/core-api/dma-api-howto.html)
+    * Hashtable (`linux/hashtable.h`)
+    * [Xarrays](https://docs.kernel.org/core-api/xarray.html)
+
+### Module 5: queue
+
+* [Module `queue` (dir ex5-queue)](./ex5-queue/)
+* A complex example of using a common kernel API
+* Repeats [livecode modile](#module-livecode-simple-common-kernel-api), but connects various mechanics into a single system
+
+# Practice 4
+
+## Modules
+
+### Module 8: simple block
+
+* [Module `sblock` (dir ex8-block)](./ex8-block/)
+* Block device
+    * Open block device with `bdev_file_open_by_path` or `bdev_file_open_by_dev`
+    * Get logical block size with `bdev_logical_block_size`
+        * Requests smaller than a logical block size are invalid
+    * `bd_nr_sectors` field reports number of sectors in the bdev
+    * `bdev_nonrot` field reports whether the bdev is a rotating device or not
+    * `bdev_get_integrity` is used to get integrity information
+* Bio (Block I/O)
+    * `struct bio` to crate Block I/O
+    * `bioset` used for allocations (from module or system)
+    * Add data pages with `bio_add_page`
+        * Bio can contain several different pages (look at the `bio->bi_io_vec`)
+        * A single item in `bio->bi_io_vec` can be a multipage
+    * Bio iterator: `bio->bi_iter`
+    * Send bio with `submit_bio` or `submit_bio_noacct`. At the end of the request, `bio->bi_end_io` is called with private data (`bio->bi_private`)
+        * For blocking submission, use `submit_bio_wait`
+    * [Integrity](https://www.kernel.org/doc/html/latest/block/data-integrity.html)
+        * `bio_integrity_alloc` is used to allocate integrity structure
+        * `bio_integrity_add_page` is used to add intergiry to a bio
+* Chaining bio
+    * Combine multiple bios into one chain and process the result after all bios are completed
+    * Use `bio_chain` to chain previous bio to the new one
+    * Do not forget `submit_bio` for the previous bio
+* Block device creation
+    * bio-based or mutli-queue based modes (*mq is not present in the module*)
+    * `struct gendisk` is the core of the block device
+    * Setup the parameters using the `struct queue_limits`
+    * Setup the callbacks with the `struct block_device_operations`
+* Scatterlist API (`linux/scatterlist.h`):
+    * Collect into single list several dma buffers
+    * Allocate list with `sg_alloc_table`
+    * Use `sg_set_page` to setup page
+    * Iterate over sg list with `for_each_sgtable_sg`
+* Not considered, but worth mentioning:
+    * `io_uring`
+    * [Userspace block device (`ublk`)](https://www.kernel.org/doc/html/latest/block/ublk.html)
+
+## Usefull links
+
+* [Repository: Simple multi-queue block device creation](https://github.com/CodeImp/sblkdev/tree/master)
+* [Presentation: Block I/O Layer](https://www.cs.cornell.edu/courses/cs4410/2021fa/assets/material/lecture24_blk_layer.pdf)
+* [Labs on Linux: Block Device Drivers](https://linux-kernel-labs.github.io/refs/heads/master/labs/block_device_drivers.html)
+* [Linux Kernel Doc: Multi-Queue Block IO Queueing Mechanism](https://docs.kernel.org/block/blk-mq.html)
+https://lwn.net/Articles/26404/
+
+# Practice 5
+
+## Modules
+
+### Module 9: simple filesystem
+
+* [Module `mfs` (dir ex9-fs)](./ex9-fs/)
+* Register fs with `register_filesystem`
+    * The `FS_REQUIRES_DEV` flag indicates that a block device is required.
+* Superblock (sb)
+    * Version
+    * Byte-ordering (le/be)
+    * Magic
+    * Reserve bytes
+    * `static_assert` on the sb size
+    * Checksum (sha256)
+* Metadata:
+    * Stores inodes and other information about where to find user data
+    * Can store journals and other stuff for reliability & recovery
+* On mount:
+    * Read superblock
+    * Check magic, version and other fields
+    * Repair superblock/metadata
+    * Read & create root
+* Super opeations (`struct super_operations`)
+    * inode allocation & destroying
+    * superblock destroying
+    * writing inode to the dev
+* Inode
+    * The main part of the filesystem
+    * Embedded generic inode into your custom inode structure
+    * Read inode from the metadata or create new
+    * Setup inode operations
+        * For directories setup `lookup` (to get inode by dentry), `create` (to create a new inode with dentry) and `unlink` (to remove dentry)
+        * For files setup address opeations for read/write syscalls
+
+## Usefull links
+
+* [Description of the old kernel fs data structures](https://aeb.win.tue.nl/linux/lk/lk-8.html)
+* [Repository: kernel filesystem example](https://github.com/sysprog21/simplefs) (a more real and complex example of fs implementation)
+
 # Usefull links
 
 * [Labs on linux](https://linux-kernel-labs.github.io/refs/heads/master/labs/kernel_modules.html)
 * [Notes for debug](https://cs4118.github.io/dev-guides/kernel-debugging.html)
 * [How to defer work in the kernel](https://linux-kernel-labs.github.io/refs/heads/master/labs/deferred_work.html)
-
+* [Kernel Development Learning Pipeline (KDLP)](https://kdlp.underground.software/slides/index.html)

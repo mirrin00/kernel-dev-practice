@@ -90,7 +90,7 @@ MODULE_PATH := $(MODULE_DIRPATH)/$(MODULE_KO)
 # === Other vars ===
 NPROC := $(shell nproc)
 RSYNC := rsync -r -u -l --progress
-MAKE_FS := virt-make-fs -F qcow2 -s +100M -t ext4 --blocksize=512
+MAKE_FS := virt-make-fs -F qcow2 -t ext4 --blocksize=512
 INSTALL_MODULES ?=
 RUN_IMAGE_CODENAME ?=
 
@@ -211,7 +211,7 @@ $(ROOTFS_ALPINE_IMG_PATH): $(ROOTFS_ALPINE_ROOTFS_PATH)
 ifneq ($(strip $(INSTALL_MODULES)),)
 	make -C $(KERNEL_PATH) INSTALL_MOD_PATH=$(ROOTFS_ALPINE_ROOTFS_PATH) modules_install
 endif
-	$(MAKE_FS) $(ROOTFS_ALPINE_ROOTFS_PATH) $(ROOTFS_ALPINE_IMG_PATH)
+	$(MAKE_FS) -s +100M $(ROOTFS_ALPINE_ROOTFS_PATH) $(ROOTFS_ALPINE_IMG_PATH)
 
 rootfs-alpine: $(ROOTFS_ALPINE_IMG_PATH)
 remove-rootfs-alpine-dir:
@@ -231,7 +231,7 @@ $(ROOTFS_DEBIAN_IMG_PATH): $(ROOTFS_DEBIAN_ROOTFS_PATH)
 ifneq ($(strip $(INSTALL_MODULES)),)
 	make -C $(KERNEL_PATH) INSTALL_MOD_PATH=$(ROOTFS_DEBIAN_ROOTFS_PATH) modules_install
 endif
-	$(MAKE_FS) $(ROOTFS_DEBIAN_ROOTFS_PATH) $(ROOTFS_DEBIAN_IMG_PATH)
+	$(MAKE_FS) -s +500M $(ROOTFS_DEBIAN_ROOTFS_PATH) $(ROOTFS_DEBIAN_IMG_PATH)
 
 rootfs-debian: $(ROOTFS_DEBIAN_IMG_PATH)
 remove-rootfs-debian-dir:
