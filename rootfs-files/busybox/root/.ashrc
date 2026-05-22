@@ -1,0 +1,8 @@
+PS1="(\h) \u \w $ "
+
+# Custom Aliases
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
+alias sys-o="echo o > /proc/sysrq-trigger"
+alias sys-b="echo b > /proc/sysrq-trigger"
