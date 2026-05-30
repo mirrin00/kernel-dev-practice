@@ -162,7 +162,7 @@ $(FISH_TAR):
 $(FISH_BIN): $(FISH_TAR)
 	tar -xf $(FISH_TAR) -C $(BUILD_DIR)
 
-$(RAMFS_BB_IMAGE): $(BUSYBOX_PATH)/_install $(SKELETON_BB_PATH) $(FISH_BIN)
+$(RAMFS_BB_IMAGE): $(BUSYBOX_PATH)/_install $(SKELETON_BB_PATH) $(FISH_BIN) $(DROPBEAR_PATH)/_install
 	mkdir -p $(RAMFS_BB_DIR)
 	cd $(RAMFS_BB_DIR) && mkdir -p bin etc/dropbear dev root proc sys tmp
 	$(RSYNC) $(BUSYBOX_PATH)/_install/* $(RAMFS_BB_DIR)

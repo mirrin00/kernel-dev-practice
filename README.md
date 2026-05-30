@@ -5,6 +5,32 @@ The program of workshops can be found in the following files:
 * [2026 (current)](./README.md)
 * [2025](./README-2025.md)
 
+# Quickstart
+
+```shell
+# Build docker image to work with project
+just build-image
+# Start container
+just start-container
+# Download and configure kernel. Another config can be used
+# Command without config uses defconfig from kernel
+just kernel-configure config.san
+# Build the kernel
+just kernel-build
+# Build busybox ramfs. It downloads busybox, dropbear and fish
+just ramfs-busybox
+# Also alpine or debian rootfs can be build
+# just rootfs-alpine
+# just rootfs-debian
+# Create qcow2 for the home (can be used between vms and rebuilds) and
+# qcow2 for the external dev (for block and fs exampels). Filesare created
+# at the /tmp, so after container restart they are removed
+just make create-tmp-disk
+just make create-tmp-home
+# Build and insmod module to the vm
+just module-rebuild ex9-fs mfs
+```
+
 # Practice 1
 
 ## Setup environment
