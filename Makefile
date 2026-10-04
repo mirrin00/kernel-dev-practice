@@ -51,6 +51,7 @@ ROOTFS_DEBIAN_IMG_PATH := $(BUILD_DIR)/rootfs-debian.img
 ROOTFS_DEBIAN_SCRIPT := $(WORK_DIR)/rootfs-files/debian/setup.sh
 
 ROOTFS_DEBIAN_PACKAGES := "fish,python3,openssh-server,vim,dmsetup,blktrace,liburing-dev,liburing2"
+# Install manually "kdump-tools,kexec-tools,makedumpfile"
 
 # === qemu/ssh options ===
 QEMU_SSH_PORT ?= 2222
@@ -244,7 +245,7 @@ remove-rootfs-debian:
 module-build:
 	mkdir -p $(BUILD_DIR)/$(MODULE_DIRNAME)
 	$(RSYNC) $(WORK_DIR)/$(MODULE_DIRNAME)/* $(BUILD_DIR)/$(MODULE_DIRNAME)
-	make -j$(NPROC) -C $(MODULE_DIRPATH) KERNEL_SRC=$(KERNEL_PATH)
+	make -j$(NPROC) -C $(MODULE_DIRPATH) KERNEL_SRC=$(KERNEL_PATH) KDIR=$(KERNEL_PATH)
 
 module-sync-vm:
 	$(SCP) $(MODULE_PATH) $(SSH_USER):/tmp/.
@@ -255,8 +256,11 @@ module-reload:
 
 # === QEMU commands ===
 
+NET_PRFX := 192
+LOCAL_IP := $(shell ip a | grep -E "inet $(NET_PRFX)(\.[0-9]+){3}" -o | head -n1 | sed "s|inet ||")
 # To change init process set rdinit=/path/to/init in kernel args
-QEMU_KPARMS := console=ttyS0 root=/dev/sda rw netconsole=+@10.0.2.15/,4444@192.168.0.109/
+QEMU_KPARMS := console=ttyS0 root=/dev/sda rw netconsole=+@10.0.2.15/,4444@$(LOCAL_IP)/
+QEMU_KPARMS += crashkernel=384M
 
 qemu-run:
 	qemu-system-x86_64 --enable-kvm -smp cpus=4 -m $(QEMU_MEMORY) -cpu host -nographic \

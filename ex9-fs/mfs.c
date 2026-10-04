@@ -20,6 +20,7 @@
 #include "linux/types.h"
 #include "linux/mpage.h"
 #include <linux/module.h>
+#include <linux/completion.h>
 
 // Macros for logging
 #define MOD_PRFX "mfs: "
@@ -48,13 +49,13 @@
 #define MFS_MAX_FILENAME (16)
 
 #if MFS_MAX_INODES >= 8
-    #if MFS_MAX_INODES % 8 == 0
-        #define MFS_MAP_SIZE (MFS_MAX_INODES / 8)
-    #else // % 8 == 0
-        #define MFS_MAP_SIZE (MFS_MAX_INODES / 8 + 1)
-    #endif
+#if MFS_MAX_INODES % 8 == 0
+#define MFS_MAP_SIZE (MFS_MAX_INODES / 8)
+#else // % 8 == 0
+#define MFS_MAP_SIZE (MFS_MAX_INODES / 8 + 1)
+#endif
 #else // >= 8
-    #define MFS_MAP_SIZE (1)
+#define MFS_MAP_SIZE (1)
 #endif
 
 #define MFS_MAGIC (0x11223344)
@@ -503,7 +504,7 @@ static int mfs_create(struct mnt_idmap *idmap, struct inode *dir,
     mark_inode_dirty(dir);
 
     insert_inode_hash(inode);
-    mark_inode_dirty(inode);  // saves itself to the md later
+    mark_inode_dirty(inode); // saves itself to the md later
     d_instantiate(dentry, inode);
 
     return 0;

@@ -115,6 +115,7 @@ Usefull links:
 * [Debian wiki about initramfs and two stage boot](https://wiki.debian.org/initramfs)
 * [Script to make simple rootfs](https://github.com/alpinelinux/alpine-make-rootfs)
 * [Script to make real VM image (including partitioning)](https://www.kernel.org/doc/html/latest/kbuild/modules.html#module-installation)
+* [Docker image to VM image](https://github.com/iximiuz/docker-to-linux)
 
 ## How to run with QEMU
 
