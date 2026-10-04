@@ -75,8 +75,10 @@ static void __show_bio_info(const struct bio *bio)
     MOD_INFO("  end_io: %ps", bio->bi_end_io);
     MOD_INFO("  bvec count: %hu/%hu (actual/max)", bio->bi_vcnt,
              bio->bi_max_vecs);
+    // Const to non-const isn't safe, but here the result is only read,
+    // so there is nothing dangerous
     MOD_INFO("  bvec array: %p/%p (actual/inline)", bio->bi_io_vec,
-             bio->bi_inline_vecs);
+             bio_inline_vecs((struct bio*) bio));
 }
 
 // ========================

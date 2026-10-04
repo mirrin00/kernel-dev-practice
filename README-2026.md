@@ -2,8 +2,8 @@
 Source code for the kernel development workshops at the ETU
 
 The program of workshops can be found in the following files:
-* [2027 (current)](./README.md)
-* [2026](./README-2026.md)
+* [2027](./README.md)
+* [2026 (current)](./README-2026.md)
 * [2025](./README-2025.md)
 
 # Quickstart
@@ -28,19 +28,7 @@ just ramfs-busybox
 # at the /tmp, so after container restart they are removed
 just make create-tmp-disk
 just make create-tmp-home
-# Build module
-just module-build ex9-fs mfs
-# Run qemue
-just qemu-run
-# Connect to qemu
-just ssh
-# Listen on netconsole
-just qemu-socat
-# Copy module to the vm
-just module-sync-vm ex9-fs mfs
-# Insmod module to the vm
-just module-reload ex9-fs mfs
-# Build, sync and insmod with single command
+# Build and insmod module to the vm
 just module-rebuild ex9-fs mfs
 ```
 

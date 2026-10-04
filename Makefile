@@ -4,14 +4,14 @@ BUILD_DIR ?= /build
 WORK_DIR ?= /work
 
 # === versions
-KVER ?= 6.12.71
+KVER ?= 6.18.55
 BUSYBOX_VER ?= 1.36.1
 DROPBEAR_VER ?= 2024.85
 ALPINE_MAKE_ROOTFS_VER ?= 0.8.1
-ALPINE_MAKE_ROOTFS_BRACNH ?= v3.23
+ALPINE_MAKE_ROOTFS_BRACNH ?= v3.24
 
 # ==== configs
-KERNEL_CFG ?= 
+KERNEL_CFG ?=
 BUSYBOX_CFG ?= .config.busybox
 ARCH = x86_64
 
@@ -32,7 +32,7 @@ DROPBEAR_PATH := $(BUILD_DIR)/dropbear-$(DROPBEAR_DIRNAME)
 SKELETON_BB_PATH := $(WORK_DIR)/rootfs-files/busybox
 RAMFS_BB_DIR := $(BUILD_DIR)/ramfs-busybox
 RAMFS_BB_IMAGE := $(BUILD_DIR)/ramfs-busybox.img
-FISH_VER := 4.5.0
+FISH_VER := 4.9.3
 FISH_TAR := fish-$(FISH_VER)-linux-$(ARCH).tar.xz
 FISH_BIN := $(BUILD_DIR)/fish
 
@@ -90,7 +90,7 @@ MODULE_PATH := $(MODULE_DIRPATH)/$(MODULE_KO)
 
 # === Other vars ===
 NPROC := $(shell nproc)
-RSYNC := rsync -r -u -l --progress
+RSYNC := rsync -r -u -l --progress -c
 MAKE_FS := virt-make-fs -F qcow2 -t ext4 --blocksize=512
 INSTALL_MODULES ?=
 RUN_IMAGE_CODENAME ?=

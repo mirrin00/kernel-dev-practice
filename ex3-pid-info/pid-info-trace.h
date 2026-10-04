@@ -32,6 +32,7 @@ TRACE_EVENT(pid_info_task_iter,
 
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH .
+#undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE pid-info-trace
 
 #include <trace/define_trace.h>

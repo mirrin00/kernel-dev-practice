@@ -2,7 +2,8 @@
 Source code for the kernel development workshops at the ETU
 
 The program of workshops can be found in the following files:
-* [2026](./README.md)
+* [2027](./README.md)
+* [2026](./README-2026.md)
 * [2025 (current)](./README-2025.md)
 
 # Practice 1
