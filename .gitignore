@@ -53,3 +53,4 @@ dkms.conf
 compile_commands.json
 .cache
 build
+idzs/**
